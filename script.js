@@ -1,4 +1,3 @@
-
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -21,6 +20,54 @@ const directions = {
     ArrowLeft: { x: -cellSize, y: 0 },
     ArrowRight: { x: cellSize, y: 0 },
 };
+
+
+
+// Add a global variable to store the chosen texture
+let wormTexture = null; // Default texture (null for no texture)
+
+// Function to load textures
+function loadTexture(texturePath) {
+    const img = new Image();
+    img.src = texturePath;
+    return img;
+}
+
+// Preload textures
+const grassTexture = loadTexture('grass_texture.png');
+const woodTexture = loadTexture('wood_texture.png');
+const metalTexture = loadTexture('metal_texture.png');
+// Add more textures as needed
+
+// Modify the drawWorm function to use textures
+function drawWorm() {
+    worm.forEach(segment => {
+        if (wormTexture) {
+            ctx.drawImage(wormTexture, segment.x, segment.y, cellSize, cellSize);
+        } else {
+            drawCell(segment, 'green'); // Default color if no texture selected
+        }
+    });
+}
+
+// Function to handle texture selection
+function selectTexture(texture) {
+    switch (texture) {
+        case 'grass':
+            wormTexture = grassTexture;
+            break;
+        case 'wood':
+            wormTexture = woodTexture;
+            break;
+        case 'metal':
+            wormTexture = metalTexture;
+            break;
+        // Add more cases for additional textures
+        default:
+            wormTexture = null; // No texture selected
+    }
+}
+
 
 function startGame(selectedDifficulty) {
     difficulty = selectedDifficulty;
@@ -53,13 +100,13 @@ function startGame(selectedDifficulty) {
     gameLoop();
 }
 
+
+
+
+
 function drawCell({ x, y }, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, cellSize, cellSize);
-}
-
-function drawWorm() {
-    worm.forEach(segment => drawCell(segment, 'green'));
 }
 
 function drawFood() {
