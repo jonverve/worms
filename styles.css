@@ -15,9 +15,10 @@ canvas {
     font-size: 24px;
     font-family: 'Arial', sans-serif;
     position: absolute;
-    top: 10px;
+    top: -70px;
     left: 50%;
     transform: translateX(-50%);
+	width: 300px;
 }
 
 #openingScreen {

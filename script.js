@@ -2,7 +2,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const cellSize = 20;
-const canvasSize = 400;
+let canvasSize = 400; // Initial canvas size
 canvas.width = canvasSize;
 canvas.height = canvasSize;
 
@@ -15,6 +15,11 @@ let direction = { x: 0, y: 0 };
 let score = 0;
 let lastRenderTime = 0;
 let difficulty = '';
+let applesCollected = 0; // Counter to track the number of apples collected
+let superStarCountdown = null;
+let superStarCountdownInitial = null; // Initial countdown value in seconds
+let appleLevels = null; // number of apples until level canvas shrinks
+
 
 const directions = {
     ArrowUp: { x: 0, y: -cellSize },
@@ -34,6 +39,7 @@ function loadTexture(texturePath) {
 const grassTexture = loadTexture('grass_texture.png');
 const woodTexture = loadTexture('wood_texture.png');
 const metalTexture = loadTexture('metal_texture.png');
+const starTexture = loadTexture('star.png');
 
 function drawWorm() {
     worm.forEach(segment => {
@@ -45,6 +51,7 @@ function drawWorm() {
     });
 }
 
+/* Commented out - switched to automatically picked by difficulty level
 function selectTexture(texture) {
     switch (texture) {
         case 'grass':
@@ -59,7 +66,7 @@ function selectTexture(texture) {
         default:
             wormTexture = null;
     }
-}
+} */
 
 function startGame(selectedDifficulty) {
     difficulty = selectedDifficulty;
@@ -68,13 +75,22 @@ function startGame(selectedDifficulty) {
 
     switch (difficulty) {
         case 'Easy Peasy':
-            speed = 3;
+		    superStarCountdownInitial = 6;
+		    appleLevels = 15;
+            speed = 5;
+			wormTexture = grassTexture;
             break;
         case 'Worm Wriggler':
-            speed = 6;
+		    superStarCountdownInitial = 4;
+		    appleLevels = 10;
+            speed = 10;
+			wormTexture = woodTexture;
             break;
         case 'Speedy Serpent':
-            speed = 10;
+		    superStarCountdownInitial = 3;
+		    appleLevels = 5;
+            speed = 16;
+			wormTexture = metalTexture;
             break;
         default:
             speed = 5;
@@ -86,9 +102,11 @@ function startGame(selectedDifficulty) {
     direction = { x: 0, y: 0 };
     score = 0;
     lastRenderTime = 0;
+    applesCollected = 0; // Reset apples collected counter
 
     updateScoreDisplay();
     gameLoop();
+    updateScoreDisplay();
 }
 
 function drawCell({ x, y }, color) {
@@ -100,13 +118,18 @@ function drawFood() {
     drawCell(food, 'red');
 
     if (superStar) {
-        drawCell(superStar, 'yellow');
+		
+		if (starTexture) {
+            ctx.drawImage(starTexture, superStar.x, superStar.y, cellSize, cellSize);
+        } else {
+            drawCell(superStar, 'yellow');
+        }
 
         // Draw countdown text
         ctx.fillStyle = 'black';
-        ctx.font = '16px Arial';
+        ctx.font = '9px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(superStarCountdown.toString(), superStar.x + cellSize / 2, superStar.y+15);
+        ctx.fillText(superStarCountdown.toString(), 8+superStar.x + cellSize / 2, superStar.y+6);
     }
 }
 
@@ -115,6 +138,7 @@ function moveWorm() {
     worm.unshift(head);
 
     if (head.x === food.x && head.y === food.y) {
+	    applesCollected++;
         score += 1;
         updateScoreDisplay();
         generateFood();
@@ -123,7 +147,6 @@ function moveWorm() {
     }
 }
 
-let superStarCountdown = 5; // Initial countdown value in seconds
 
 function generateFood() {
     food = {
@@ -131,11 +154,35 @@ function generateFood() {
         y: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize
     };
 
-    // Generate a random number between 0 and 1
+    if (applesCollected % appleLevels === 0) {
+        canvasSize -= cellSize; // Decrease canvas size by one block
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+
+		// EXPERIMENTAL - Move each segment of the worm away from the walls if necessary
+        worm.forEach(segment => {
+            if (segment.x >= canvasSize) {
+                segment.x = canvasSize - cellSize * 2;
+            }
+            if (segment.y >= canvasSize) {
+                segment.y = canvasSize - cellSize * 2;
+            }
+        });
+
+
+    }
+
+    // Check and adjust food position to fit within new canvas size
+    if (food.x >= canvasSize || food.y >= canvasSize) {
+        generateFood(); // Regenerate food if it's out of bounds
+        return;
+    }
+	
+	// Generate a random number between 0 and 1
     const randomValue = Math.random();
 
-    // Check if the random value is less than 0.5 to determine if the super star should appear
-    if (randomValue < 0.15) {
+    // Check if the random value is less than constant to determine if the super star should appear
+    if (randomValue < 0.18) {
         let starX, starY;
         do {
             starX = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
@@ -143,7 +190,7 @@ function generateFood() {
         } while (isCollisionWithSnake(starX, starY) || isCloseToApple(starX, starY));
 
         superStar = { x: starX, y: starY };
-        superStarCountdown = 3; // Reset countdown value
+        superStarCountdown = superStarCountdownInitial; // Reset countdown value
         superStarTimer = setInterval(() => {
             superStarCountdown--;
             if (superStarCountdown <= 0) {
@@ -160,7 +207,7 @@ function generateFood() {
 
 function updateScoreDisplay() {
     const scoreDisplay = document.getElementById('score');
-    scoreDisplay.textContent = `Score: ${score} (${difficulty})`;
+scoreDisplay.textContent = `Score: ${score} (${difficulty}) Apples: ${applesCollected}`;
 }
 
 function checkGameOver() {
