@@ -9,6 +9,22 @@
 
     <div id="openingScreen">
 	<img src="titlescreen.jpg" />
+	<h2>Select Difficulty to Start!</h2>
+	<div id="buttonContainer">
+        <button onclick="startGame('Easy Peasy')">Easy Peasy</button>
+        <button onclick="startGame('Worm Wriggler')">Worm Wriggler</button>
+        <button onclick="startGame('Speedy Serpent')">Speedy Serpent</button>
+    </div>
+	<div id="highScoreScreen" style="display:none;">
+    <h2>High Scores</h2>
+    <table id="highScoreList">
+	<thead><td>#</td><td>Name</td><td>Score</td><td>Difficulty</td><td>Apples</td><td>Level</td></thead>
+	<tbody>	</tbody>
+	</table>
+    <button onclick="hideHighScores()">Back</button>
+	</div>
+	
+	<button onclick="showHighScores()">View High Scores</button>
 
 		<div id="instructions">
             <h2>How to Play</h2>
@@ -22,24 +38,7 @@
             <li>💯 Survive as long as you can and try to achieve the highest score!</li>
 			</ul>
 	   </div>
-
-	<div id="highScoreScreen" style="display:none;">
-    <h2>High Scores</h2>
-    <table id="highScoreList">
-	<thead><td>#</td><td>Name</td><td>Score</td><td>Difficulty</td><td>Apples</td><td>Level</td></thead>
-	<tbody>	</tbody>
-	</table>
-    <button onclick="hideHighScores()">Back</button>
-	</div>
 	
-	<button onclick="showHighScores()">View High Scores</button>
-	
-	<h2>Select Difficulty to Start!</h2>
-	<div id="buttonContainer">
-        <button onclick="startGame('Easy Peasy')">Easy Peasy</button>
-        <button onclick="startGame('Worm Wriggler')">Worm Wriggler</button>
-        <button onclick="startGame('Speedy Serpent')">Speedy Serpent</button>
-    </div>
 	</div>
     <div id="gameScreen" style="display:none;">
 	        <div id="score">Score: 0</div>

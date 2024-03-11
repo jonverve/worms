@@ -6,11 +6,14 @@ let canvasSize = 400; // Initial canvas size
 canvas.width = canvasSize;
 canvas.height = canvasSize;
 
-let blackHoleAfterSegment = null; // tracks the segment of the worm just before a blackhole, null if the worm not going through blackhole
-let probBlackHole = 0.30; // probability of a black hole per apple level
-let probStar = 0.22; // probability of a star per apple level
+let cheatMode = false;
+let blackHoleAfterSegment = []; // tracks the segment of the worm just before a blackhole, null if the worm not going through blackhole. could be more than 1 segment (array)
+let enteredBlackHole = 0; // tracks number of times the worm is through the black hole (could be more than 1)
+let probBlackHole = 1; // probability of a black hole per apple level
+let probStar = 0.25; // probability of a star per apple level
 let blackHolesActive = false;
 let blackHoles = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+let applesPerNewBlackHole = 5; // regen blackholes only every 5 apples
 
 const highScoreKey = 'wormGameHighScores';
 const highScoreLength = 10;
@@ -120,19 +123,19 @@ function startGame(selectedDifficulty) {
 // #############################
 
 function gameLoop(currentTime) {
-
+console.log(cheatMode);
 	// Check for game over conditions
-	if (checkWormWallCollision() || checkWormSelfCollision()) {
-	
+	if (!cheatMode && (checkWormWallCollision() || checkWormSelfCollision())) {
+			
 		if (isHighScore(score)) {
 		updateHighScores(score);
 		}
-		alert("Game Over!");
+		alert("Game Over! \nFinal score: " + score + "\nApples collected: " + applesCollected + "\nLevel: " + currentLevel + "\nDifficulty level: " + difficulty);
 		document.location.reload();
 		return;
-	}
+	} 
 
-	// Synch worm speed
+	// Manage worm speed
     const secondsSinceLastRender = (currentTime - lastRenderTime) / 1000;
     if (secondsSinceLastRender < 1 / speed) {
         	
@@ -160,19 +163,19 @@ function gameLoop(currentTime) {
 
 function moveWorm() {
     let head = { x: worm[0].x + direction.x, y: worm[0].y + direction.y };
-	let enteredBlackHole = false;
+	let enteredBlackHole = 0;
 
+    // Check if the worm's head enters a black hole
     if (blackHolesActive) {
-		// Check if the worm's head enters a black hole
         for (let i = 0; i < blackHoles.length; i++) {
             if (head.x === blackHoles[i].x && head.y === blackHoles[i].y) {
-                enteredBlackHole = true;
+                headEnteredBlackHole = true;
                 let otherBH = blackHoles[(i + 1) % blackHoles.length];
                 head = { x: otherBH.x + direction.x, y: otherBH.y + direction.y };
-                if (blackHoleAfterSegment === null) {
-                    // Only set to 1 when first entering the black hole
-                    blackHoleAfterSegment = 1;
+                if (enteredBlackHole === 0) {
+                    enteredBlackHole++;
                 }
+                blackHoleAfterSegment.push(1);
                 break;
             }
         }
@@ -180,22 +183,24 @@ function moveWorm() {
 
     worm.unshift(head);
 	
-    // Update blackHoleAfterSegment if the worm enters a black hole
-	if (blackHoleAfterSegment !== null) {
-        // Increment if already tracking a segment in the black hole
-        blackHoleAfterSegment++;
-        if (blackHoleAfterSegment > worm.length) {
-            // Reset when worm is completely out of the black hole
-            blackHoleAfterSegment = null;
+    // Update and filter blackHoleAfterSegment array
+    blackHoleAfterSegment = blackHoleAfterSegment.map(segment => segment + 1).filter(segment => {
+        if (segment <= worm.length) {
+            return true;
+        } else {
+            if (enteredBlackHole > 0) {
+                enteredBlackHole--;
+            }
+            return false;
         }
-	}
+    });
 
 	// check if worm got apple
     if (head.x === food.x && head.y === food.y) {
 	    applesCollected++;
         score += appleWorth;
         updateScoreDisplay();
-        generateFood();
+        generateObjects();
 		
 		// Check if a new level is reached
 		if (applesCollected % applesPerLevel === 0) {
@@ -212,7 +217,6 @@ function moveWorm() {
 function pauseGameForNewLevel() {
     // Pause game logic (e.g., stop rendering, disable movement)
     isLevelPaused = true;
-	setTimeout(() => ignoreKeyPress = true, 5000);
 	
     // Display level number and prompt for user action
     // Call this after a short delay to ensure game loop acknowledges the pause
@@ -233,7 +237,7 @@ function displayLevelInfo() {
 
 function updateScoreDisplay() {
     const scoreDisplay = document.getElementById('score');
-	scoreDisplay.textContent = `Score: ${score} (${difficulty}) Apples: ${applesCollected} Level: ${currentLevel}`;
+	scoreDisplay.textContent = `${difficulty} Level ${currentLevel}. Apples: ${applesCollected} Score: ${score}`;
 }
 
 function checkWormWallCollision() {
@@ -272,67 +276,12 @@ function checkSuperStarCollision() {
 // ## GENERATE GAME FIELD OBJECTS ##
 // #################################
 
-function generateBlackHoles() {
-    const margin = 4 * cellSize;
-
-    // Spawn the first black hole near the worm head
-    spawnBlackHoleNear(worm[0], 6, 0);
-
-    // Determine the target for the second black hole
-    let target;
-    if (superStar && Math.random() < 0.5) {
-        // 50% chance to spawn near the star if it exists
-        target = superStar;
-    } else {
-        // Otherwise, spawn near the apple
-        target = food;
-    }
-    do {
-		spawnBlackHoleNear(target, 6, 1);
-	} while (blackHoles[0].x == blackHoles[1].x && blackHoles[0].y == blackHoles[1].y)
-
-    blackHolesActive = true;
-}
-
-function spawnBlackHoleNear(target, range, index) {
-    const margin = 4 * cellSize;
-	let i = index;
-	do {
-		// Adjust the range to account for the minimum distance from the canvas edges
-           blackHoles[i].x = target.x + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
-           blackHoles[i].y = target.y + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
-	} while (isOutOfBounds(blackHoles[i].x, blackHoles[i].y) || isCollisionWithSnake(blackHoles[i].x, blackHoles[i].y) || isCollisionWithApple(blackHoles[i].x, blackHoles[i].y));
-}
-
-function isOutOfBounds(x, y) {
-    return x < 0 || x >= canvasSize || y < 0 || y >= canvasSize;
-}
-
-function isCollisionWithSnake(x, y) {
-    return worm.some(segment => segment.x === x && segment.y === y);
-}
-
-function isCollisionWithApple(x, y) {
-    // Check if apple matches the given coordinates
-    return food.x === x && food.y === y;
-}
-
-function isCollisionWithBlackHole(x, y) {
-    // Assuming blackHoles is an array of black hole positions
-    return blackHoles.some(bh => bh.x === x && bh.y === y);
-}
-
-function isCollisionWithStar(x, y) {
-    // Check if the super star exists and matches the given coordinates
-    return superStar && superStar.x === x && superStar.y === y;
-}
-
-function generateFood() {
+function generateObjects() {
 	// order of this subroute:
 	//    1. decrease canvas size (at correct time)
 	//    2. generate stars	(at random)
 	//    3. generate apple 
-	//    4. generate blackholes (at random) last to they can be strategically placed
+	//    4. generate blackholes (at random) last so they can be strategically placed
 
    // check for canvas size shrink 
    if (applesCollected % appleLevels === 0) {
@@ -350,7 +299,7 @@ function generateFood() {
         do {
             starX = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
             starY = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
-        } while (isCollisionWithSnake(starX, starY) || isCloseToApple(starX, starY));
+        } while (isCollisionWithSnake(starX, starY) || isCloseToApple(starX, starY) || isCollisionWithBlackHole(starX, starY));
 
         superStar = { x: starX, y: starY };
 		
@@ -380,7 +329,8 @@ function generateFood() {
 
         // Check for collisions with snake, black holes, and the star
         if (!isCollisionWithSnake(food.x, food.y) && 
-            !isCollisionWithStar(food.x, food.y)) {
+            !isCollisionWithStar(food.x, food.y) &&
+			!isCollisionWithBlackHole(food.x, food.y)) {
             validPosition = true;
         }
     }
@@ -389,13 +339,93 @@ function generateFood() {
 
 	// Generate black holes if good dice roll - do last so black holes can be strategically placed based on worm head and apple/star
 	// Only generate if the worm is NOT teleporting through the black holes. If it is, then keep current black hole in place
-	if (blackHoleAfterSegment === null) {
+	// Only generate every applesPerNewBlackHole 
+	if (blackHoleAfterSegment.length === 0 && (applesCollected % applesPerNewBlackHole === 0)) {
 		if (Math.random() < probBlackHole) {
 			generateBlackHoles();
 		} else {
 			blackHolesActive = false;
 		}
 	}
+}
+
+
+function generateBlackHoles() {
+    // Spawn the first black hole near the worm head
+    spawnBlackHoleNear(worm[0], 6, 0);
+
+    // Determine the target for the second black hole
+    let target;
+    if (superStar && Math.random() < 0.5) {
+        // 50% chance to spawn near the star if it exists
+        target = superStar;
+    } else {
+        // Otherwise, spawn near the apple
+        target = food;
+    }
+    do {
+		spawnBlackHoleNear(target, 6, 1);
+	} while (blackHoles[0].x == blackHoles[1].x && blackHoles[0].y == blackHoles[1].y)
+
+    blackHolesActive = true;
+}
+
+function spawnBlackHoleNear(target, range, index) {
+    const margin = 4 * cellSize; // margin is to keep blackholes away from the edge of the canvas
+    const minDistance = 3 * cellSize; // Minimum distance between black holes
+    let i = index;
+    let positionIsValid;
+    do {
+        // Calculate potential new positions
+        let potentialX = target.x + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
+        let potentialY = target.y + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
+
+        // Ensure the positions are within the canvas boundaries considering the margin
+        potentialX = Math.max(margin, Math.min(potentialX, canvasSize - margin - cellSize));
+        potentialY = Math.max(margin, Math.min(potentialY, canvasSize - margin - cellSize));
+
+        // Assign the validated positions
+        blackHoles[i].x = potentialX;
+        blackHoles[i].y = potentialY;
+
+        // Check if the position is valid (4 criteria)
+        positionIsValid = !isOutOfBounds(blackHoles[i].x, blackHoles[i].y) &&
+                          !isCollisionWithSnake(blackHoles[i].x, blackHoles[i].y) &&
+                          !isCollisionWithApple(blackHoles[i].x, blackHoles[i].y) &&
+                          !isCollisionWithStar(blackHoles[i].x, blackHoles[i].y);
+
+		// Ensure black holes are at least minDistance away from each other
+		for (let j = 0; j < i; j++) {
+			if (Math.abs(blackHoles[j].x - blackHoles[i].x) < minDistance && 
+				Math.abs(blackHoles[j].y - blackHoles[i].y) < minDistance) {
+				positionIsValid = false;
+				break;
+			}
+		}
+    } while (!positionIsValid);
+}
+
+function isOutOfBounds(x, y) {
+    return x < 0 || x >= canvasSize || y < 0 || y >= canvasSize;
+}
+
+function isCollisionWithSnake(x, y) {
+    return worm.some(segment => segment.x === x && segment.y === y);
+}
+
+function isCollisionWithApple(x, y) {
+    // Check if apple matches the given coordinates
+    return food.x === x && food.y === y;
+}
+
+function isCollisionWithBlackHole(x, y) {
+    // Assuming blackHoles is an array of black hole positions
+    return blackHoles.some(bh => bh.x === x && bh.y === y);
+}
+
+function isCollisionWithStar(x, y) {
+    // Check if the super star exists and matches the given coordinates
+    return superStar && superStar.x === x && superStar.y === y;
 }
 
 function isCloseToApple(x, y) {
@@ -463,15 +493,15 @@ function drawWorm() {
 
 		drawWormSegment(worm[i], wormTexture);
 
-		// only draw middle segments if not last segment and segment is not between black holes
-		if (i > 0 && i !== blackHoleAfterSegment-1 ) {
-			const nextSegment = worm[i - 1];
-			// Calculate the position of the new segment
-			const newSegment = {
-				x: (worm[i].x + nextSegment.x) / 2,
-				y: (worm[i].y + nextSegment.y) / 2
-			};
-			drawWormSegment(newSegment, wormTexture);
+        // Only draw middle segments if not last segment and segment is not between black holes
+        if (i > 0 && !blackHoleAfterSegment.includes(i + 1)) {
+            const nextSegment = worm[i - 1];
+            // Calculate the position of the new segment
+            const newSegment = {
+                x: (worm[i].x + nextSegment.x) / 2,
+                y: (worm[i].y + nextSegment.y) / 2
+            };
+            drawWormSegment(newSegment, wormTexture);
 		}
 	}
 }
@@ -593,10 +623,15 @@ function saveHighScores(highScores) {
 
 function changeDirection(event) {
 	let keyPressed = event.key;
-    if (['W', 'A', 'S', 'D', 'w', 'a', 's', 'd'].includes(keyPressed)) {
+    if (['W', 'A', 'S', 'D', 'X', 'w', 'a', 's', 'd', 'x'].includes(keyPressed)) {
         keyPressed = keyPressed.toLowerCase(); // Convert WASD keys to lowercase
 	}
-    const newDirection = directions[keyPressed];
+	
+	if (keyPressed === "x") {
+		let cheatMode = true;
+	}
+	const newDirection = directions[keyPressed];
+	
     if (newDirection) {
 
         // Unpause the game and start the new level
