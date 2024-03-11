@@ -6,7 +6,7 @@ let canvasSize = 400; // Initial canvas size
 canvas.width = canvasSize;
 canvas.height = canvasSize;
 
-let probBlackHole = 0.5; // probability of a black hole per apple level
+let probBlackHole = 0.30; // probability of a black hole per apple level
 let probStar = 0.22; // probability of a star per apple level
 let blackHolesActive = false;
 let blackHoles = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
@@ -52,13 +52,37 @@ function loadTexture(texturePath) {
 
 function generateBlackHoles() {
     const margin = 4 * cellSize;
-    for (let i = 0; i < blackHoles.length; i++) {
-        do {
-            blackHoles[i].x = Math.floor(Math.random() * ((canvasSize - margin) / cellSize)) * cellSize + margin;
-            blackHoles[i].y = Math.floor(Math.random() * ((canvasSize - margin) / cellSize)) * cellSize + margin;
-        } while (isCollisionWithSnake(blackHoles[i].x, blackHoles[i].y));
+
+    // Spawn the first black hole near the worm head
+    spawnBlackHoleNear(worm[0], 6, 0);
+
+    // Determine the target for the second black hole
+    let target;
+    if (superStar && Math.random() < 0.5) {
+        // 50% chance to spawn near the star if it exists
+        target = superStar;
+    } else {
+        // Otherwise, spawn near the apple
+        target = food;
     }
+    
+	spawnBlackHoleNear(target, 6, 1);
+
     blackHolesActive = true;
+}
+
+function spawnBlackHoleNear(target, range, index) {
+    const margin = 4 * cellSize;
+	let i = index;
+	do {
+		// Adjust the range to account for the minimum distance from the canvas edges
+           blackHoles[i].x = target.x + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
+           blackHoles[i].y = target.y + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
+	} while (isOutOfBounds(blackHoles[i].x, blackHoles[i].y) || isCollisionWithSnake(blackHoles[i].x, blackHoles[i].y));
+}
+
+function isOutOfBounds(x, y) {
+    return x < 0 || x >= canvasSize || y < 0 || y >= canvasSize;
 }
 
 function drawBlackHoles() {
@@ -106,8 +130,10 @@ function startGame(selectedDifficulty) {
 			appleWorth = 3;
             break;
     }
-
-    worm = [{ x: 200, y: 200 }];
+	worm = [
+        { x: 200, y: 200 }, // Head segment
+        { x: 180, y: 200 }  // Second segment, adjust position as needed
+    ];
     food = { x: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize, 
              y: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize };
     direction = { x: 0, y: 0 };
@@ -116,8 +142,8 @@ function startGame(selectedDifficulty) {
     applesCollected = 0; // Reset apples collected counter
 
     updateScoreDisplay();
+	pauseGameForNewLevel();
     gameLoop();
-    updateScoreDisplay();
 }
 
 function drawCell({ x, y }, color) {
@@ -170,6 +196,7 @@ function moveWorm() {
 		// Check if a new level is reached
 		if (applesCollected % applesPerLevel === 0) {
 			currentLevel++;
+			updateScoreDisplay()
 			pauseGameForNewLevel();
 		}
 		
@@ -182,11 +209,7 @@ function pauseGameForNewLevel() {
     // Pause game logic (e.g., stop rendering, disable movement)
     isLevelPaused = true;
 	setTimeout(() => ignoreKeyPress = true, 5000);
-
-    // Reposition worm at the center
-    // worm = [{ x: canvasSize / 2, y: canvasSize / 2 }];
-    // direction = { x: 0, y: 0 };
-
+	
     // Display level number and prompt for user action
     // Call this after a short delay to ensure game loop acknowledges the pause
     setTimeout(displayLevelInfo, 100);
@@ -194,11 +217,15 @@ function pauseGameForNewLevel() {
 
 function displayLevelInfo() {
     // ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(`Level ${currentLevel}`, canvasSize / 2, canvasSize / 2 - 20);
     ctx.fillText('Press an arrow key to start', canvasSize / 2, canvasSize / 2 + 20);
+    ctx.fillStyle = 'black';
+    ctx.fillText(`Level ${currentLevel}`, canvasSize / 2 + 2, canvasSize / 2 - 18);
+    ctx.fillText('Press an arrow key to start', canvasSize / 2 + 2, canvasSize / 2 + 18);
+
 }
 
 function isCollisionWithBlackHole(x, y) {
@@ -213,13 +240,11 @@ function isCollisionWithStar(x, y) {
 
 function generateFood() {
 	// order of this subroute:
-	//    1. decrease canvas size
-	//    2. generate blackholes and stars
-	//    3. generate apple last, to make sure it is not on top of them
-  //  food = {
-  //      x: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize,
-  //      y: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize
-  //  };
+	//    1. decrease canvas size (if time)
+	//    2. generate stars	
+	//    3. generate apple 
+	//    4. generate blackholes last to they can be strategically placed
+
 
    // check for canvas size shrink 
    if (applesCollected % appleLevels === 0) {
@@ -243,12 +268,7 @@ function generateFood() {
 //        return;
 //    }
 
-    // Generate black holes if good dice roll
-	if (Math.random() < probBlackHole) {
-        generateBlackHoles();
-    } else {
-        blackHolesActive = false;
-    }
+    
 	
     // Generate super star if good dice roll
     if (Math.random() < probStar) {
@@ -272,7 +292,7 @@ function generateFood() {
         superStarCountdown = 0; // Reset countdown value
         clearInterval(superStarTimer); // Clear any existing timer
     }
-	
+	// generate apple
 	 let validPosition = false;
     while (!validPosition) {
         // Randomly generate apple position
@@ -286,12 +306,19 @@ function generateFood() {
             validPosition = true;
         }
     }
+
+// Generate black holes if good dice roll - do last so black holes can be strategically placed
+	if (Math.random() < probBlackHole) {
+        generateBlackHoles();
+    } else {
+        blackHolesActive = false;
+    }
 	
 }
 
 function updateScoreDisplay() {
     const scoreDisplay = document.getElementById('score');
-scoreDisplay.textContent = `Score: ${score} (${difficulty}) Apples: ${applesCollected}`;
+scoreDisplay.textContent = `Score: ${score} (${difficulty}) Apples: ${applesCollected} Level: ${currentLevel}`;
 }
 
 function checkGameOver() {
@@ -357,25 +384,20 @@ function gameLoop(currentTime) {
 		drawBlackHoles();
 		checkSuperStarCollision();
 	}
+	
     requestAnimationFrame(gameLoop);
 }
 
 document.addEventListener("keydown", function(event) {
-    if (isLevelPaused) {
-        const newDirection = directions[event.key];
-        if (newDirection) {
-            // Unpause the game and start the new level
+	const newDirection = directions[event.key];
+	if (newDirection) {
+		if (isLevelPaused) {
             isLevelPaused = false;
-            // worm = [{ x: canvas.width / 2, y: canvas.height / 2 }]; // Center the worm
-            direction = newDirection;
-            // Resume game logic here, like restarting the game loop
-            // ...
-        }
-    } else {
-        // Regular game play key handling
-        const newDirection = directions[event.key];
-        if (newDirection) {
-            direction = newDirection;
-        }
+            // Unpause the game and start the new level
+		}
+       
+        if (newDirection && !(direction.x === newDirection.x * -1 && direction.y === newDirection.y * -1)) {
+        direction = newDirection; // Update direction if it's not the opposite
+    }     
     }
 });
