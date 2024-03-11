@@ -8,26 +8,43 @@
 <body>
 
     <div id="openingScreen">
+	<img src="titlescreen.jpg" />
+
+		<div id="instructions">
+            <h2>How to Play</h2>
+			<ul>
+            <li>Use the arrow keys to control the direction of the worm.</li>
+            <li>Every time you eat red apples you will grow longer.</li>
+            <li>Avoid running into the walls or into yourself!</li>
+			<li>Super stars will appear occasionally, collect them to shrink and score extra points, but watch out, they expire quickly!</li>
+			<li>Watch out for black holes! Entering one will teleport the worm to the other side. They appear randomly and add a twist to your adventure! Hmm...perhaps you could use them to your advantage...</li>
+            <li>After eating so many apples, the playing area will shrink: Easy Peasy-every 15, Worm Wriggler-every 10, Speedy Serpent-every 5</li>
+            <li>Survive as long as you can and try to achieve the highest score!</li>
+			</ul>
+	   </div>
+
+	<div id="highScoreScreen" style="display:none;">
+    <h2>High Scores</h2>
+    <table id="highScoreList">
+	<thead><td>Name</td><td>Score</td><td>Difficulty</td><td>Apples</td><td>Level</td></thead>
+	<tbody>	</tbody>
+	</table>
+    <button onclick="hideHighScores()">Back</button>
+	</div>
 	
-	<h2>Select Difficulty</h2>
+	<button onclick="showHighScores()">View High Scores</button>
+	
+	<h2>Select Difficulty to Start!</h2>
+	<div id="buttonContainer">
         <button onclick="startGame('Easy Peasy')">Easy Peasy</button>
         <button onclick="startGame('Worm Wriggler')">Worm Wriggler</button>
         <button onclick="startGame('Speedy Serpent')">Speedy Serpent</button>
-		
-		<div id="instructions">
-            <h2>How to Play</h2>
-            <p>Use the arrow keys to control the direction of the worm.</p>
-            <p>Every time you eat red apples you will grow longer.</p>
-            <p>Avoid running into the walls or into yourself!</p>
-			<p>Super stars will appear occasionally, collect them to shrink and score extra points, but watch out, they expire quickly!</p>
-			<p>Watch out for black holes! Entering one will teleport the worm to the other side. They appear randomly and add a twist to your adventure! Hmm...perhaps you could use them to your advantage...</p>
-            <p>After eating so many apples, the playing area will shrink: Easy Peasy-every 15, Worm Wriggler-every 10, Speedy Serpent-every 5</p>
-            <p>Survive as long as you can and try to achieve the highest score!</p>
-        </div>
     </div>
+	</div>
     <div id="gameScreen" style="display:none;">
-        <div id="score">Score: 0</div>
-        <canvas id="gameCanvas"></canvas>
+	        <div id="score">Score: 0</div>
+        <canvas id="gameCanvas"></canvas> <br />
+		<img src="titlescreen.jpg" style="width:402px" />
     </div>
     <script src="script.js"></script>
 </body>

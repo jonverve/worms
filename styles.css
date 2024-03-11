@@ -5,10 +5,25 @@ body {
     height: 100vh;
     margin: 0;
     background-color: #f0f0f0;
-}
+} 
 
 canvas {
     border: 1px solid #000;
+}
+
+#highScoreScreen {
+    text-align: center;
+}
+
+#highScoreList {
+    padding: 3px;
+}
+
+#highScoreList tr, th, td, table {
+    border: 1px solid #a2a9b1;
+	border-spacing: 0px;
+	border-collapse: collapse;
+	margin: 0 auto;
 }
 
 #score {
@@ -20,7 +35,7 @@ canvas {
     transform: translateX(-50%);
 	width: 300px;
 }
-
+ /*
 #openingScreen {
     display: flex;
     flex-direction: column;
@@ -34,11 +49,100 @@ button {
     font-size: 16px;
     cursor: pointer;
 }
-
+*/
 #gameScreen {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
+}  
+
+
+
+/* Define color variables based on the color analysis */
+:root {
+    --dark-blue-green: rgb(16, 70, 88);
+    --light-yellow: rgb(234, 234, 192);
+    --red-pink: rgb(181, 63, 94);
+    --bright-green: rgb(154, 198, 31);
+    --sky-blue: rgb(29, 183, 227);
+}
+
+#instructions {
+	font-size: 12px;
+    font-family: 'Arial', sans-serif;
+
+}
+
+/* Set the main container to a max-width and max-height of 900px and center it */
+#openingScreen {
+    max-width: 900px;
+    /* max-height: 900px; */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* This will distribute space evenly */
+    background-color: var(--light-yellow); /* Use one of the dominant colors as the background */
+}
+
+/* Make image responsive within the container */
+#openingScreen img {
+    max-width: 100%;
+    max-height: 30%; /* Adjust the image to a reasonable portion of the screen */
+    object-fit: contain; /* Ensures the image is scaled properly */
+}
+
+/* Style the buttons and text */
+button, h2 {
+    color: var(--light-yellow); /* Text color */
+    background-color: var(--red-pink); /* Button background color */
+    border: 2px solid var(--dark-blue-green); /* Border color */
+    border-radius: 5px; /* Rounded corners for buttons */
+    padding: 0.5em 1em; /* Padding inside the buttons */
+    margin: 0.5em; /* Margin around buttons */
+    font-size: 1rem; /* Font size */
+    text-align: center; /* Center text inside buttons */
+}
+
+button:hover {
+    background-color: var(--bright-green); /* Hover state color */
+	color: var(--dark-blue-green);
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 900px) {
+    h2, button {
+        font-size: 0.8rem; /* Smaller font size for smaller screens */
+    }
+}
+
+@media () {
+    #openingScreen {
+        max-height: 100vh; /* Ensure the height is within the viewport */
+    }
+
+    #openingScreen img {
+        max-height: 30%; /* Adjust image height on smaller screens */
+    }
+}
+
+#buttonContainer {
+    display: flex;
+    justify-content: space-between; /* This will space the buttons evenly */
+    padding: 0; /* Adjust padding as necessary */
+}
+
+#buttonContainer button {
+    width: 25%; /* Set each button to occupy 25% of the container's width */
+    margin: 0.5%; /* Adjust margin to ensure buttons don't touch */
+    box-sizing: border-box; /* This ensures padding and border are included in the width */
+}
+
+/* You may need to adjust the button sizes for smaller screens */
+@media (max-width: 900px) {
+    #buttonContainer button {
+        font-size: 0.7rem; /* Smaller font size for smaller screens */
+        padding: 0.5em; /* Adjust padding for smaller screens */
+    }
 }
