@@ -148,3 +148,13 @@ button:hover {
         padding: 0.5em; /* Adjust padding for smaller screens */
     }
 }
+
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(0.5); }
+}
+
+.pop-animation {
+    animation: pop 0.25s ease;
+}

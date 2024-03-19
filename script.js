@@ -42,7 +42,7 @@ let isLevelPaused = false; // To track if the game is paused for a new level
 let directionQueue = []; // Initialize a queue to store direction changes
 let speed; // Will be set based on difficulty
 let worm = [];
-let food = { x: 0, y: 0 };
+let food = { x: 0, y: 0, type: "apple" };
 let direction = { x: 0, y: 0 };
 let score = 0;
 let appleWorth = 0;
@@ -136,7 +136,8 @@ function startGame(selectedDifficulty) {
         { x: cellSize + cellSize * canvasCellWidth / 2, y: cellSize + cellSize * canvasCellHeight / 2 }  // Second segment
     ];
     food = { x: Math.floor(Math.random() * (canvas.width / cellSize)) * cellSize, 
-             y: Math.floor(Math.random() * (canvas.height / cellSize)) * cellSize };
+             y: Math.floor(Math.random() * (canvas.height / cellSize)) * cellSize,
+			 type: 'apple' };
     direction = { x: 0, y: 0 };
     score = 0;
     lastRenderTime = 0;
@@ -252,11 +253,12 @@ function moveWorm() {
 	    applesCollected++;
         if (!cheatMode) { score += appleWorth; } // only increment score if not in cheat mode
         updateScoreDisplay();
+		applyPopAnimation(food);
 
 		// Check if a new level is reached
 		if (applesCollected % applesPerLevel === 0) {
 			currentLevel++;
-			updateScoreDisplay()
+			updateScoreDisplay();
 			pauseGameForNewLevel();
 		}
 		generateObjects();
@@ -320,6 +322,9 @@ function checkSuperStarCollision() {
         worm[0].y >= superStar.y && worm[0].y < superStar.y + cellSize) {
             if (!cheatMode) { score += 4; } // only add to score if not in cheatmode
             updateScoreDisplay();
+	        // Add pop animation to super star
+            applyPopAnimation(superStar);
+
             clearTimeout(superStarTimer);
             superStar = null;
             superStarTimer = null;
@@ -365,7 +370,7 @@ function generateObjects() {
 			console.log("starX, starY", starX, starY);
         } while ((loopCount < 15) && (isCollisionWithSnake(starX, starY) || isCloseToApple(starX, starY) || isCollisionWithBlackHole(starX, starY) || isCollisionWithFixedBlocks(starX, starY)));
 		
-        superStar = { x: starX, y: starY };
+        superStar = { x: starX, y: starY, type: 'star' };
 		
 		// Countdown logic
         superStarCountdown = superStarCountdownInitial; // Reset countdown value
@@ -390,6 +395,7 @@ function generateObjects() {
         // Randomly generate apple position
         food.x = Math.floor(Math.random() * (canvas.width / cellSize)) * cellSize;
         food.y = Math.floor(Math.random() * (canvas.height / cellSize)) * cellSize;
+		food.type = 'apple';
 		console.log("food.x, food.y: ", food.x, food.y);
 
         // Check for collisions with snake, black holes, and the star
@@ -658,7 +664,45 @@ function drawFood() {
         ctx.font = '9px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(superStarCountdown.toString(), 8+superStar.x + cellSize / 2, superStar.y+6);
+
     }
+}
+
+function applyPopAnimation(obj) {
+    let canvasRect = canvas.getBoundingClientRect();
+    let texture;
+
+    switch (obj.type) {
+        case 'star':
+            texture = starTexture;
+            break;
+        case 'apple':
+            texture = appleTexture;
+            break;
+        // Add cases for other types as needed
+        default:
+            texture = worm1Texture; // Fallback texture
+    }
+
+    let objElement = document.createElement('div');
+    objElement.style.position = 'absolute';
+    objElement.style.left = `${canvasRect.left + obj.x}px`;
+    objElement.style.top = `${canvasRect.top + obj.y}px`;
+    objElement.style.width = `${cellSize}px`;
+    objElement.style.height = `${cellSize}px`;
+
+    let imgElement = document.createElement('img');
+    imgElement.src = texture.src;
+    imgElement.style.width = '100%';
+    imgElement.style.height = '100%';
+
+    objElement.appendChild(imgElement);
+    objElement.classList.add('pop-animation');
+    document.body.appendChild(objElement);
+
+    objElement.addEventListener('animationend', () => {
+        document.body.removeChild(objElement);
+    });
 }
 
 // ##########################
