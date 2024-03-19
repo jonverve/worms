@@ -1,22 +1,39 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Cell is size of all sprites (worm, apples, & all other game elements)
+const canvasCellWidth = 20;
+const canvasCellHeight = 20;
+
+// Pixels per cell
 const cellSize = 20;
-let canvasSize = 400; // Initial canvas size
-canvas.width = canvasSize;
-canvas.height = canvasSize;
+
+// Initial canvas width and height
+canvas.width = cellSize * canvasCellWidth;
+canvas.height = cellSize * canvasCellHeight;
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+let mouseStartX = 0;
+let mouseStartY = 0;
+let mouseEndX = 0;
+let mouseEndY = 0;
 
 let cheatMode = false;
-let blackHoleAfterSegment = []; // tracks the segment of the worm just before a blackhole, null if the worm not going through blackhole. could be more than 1 segment (array)
+let blackHoleAfterSegment = []; // tracks the segment of the worm just before a blackhole, null if the worm not going through blackhole. could be more than 1 segment (array) also used for cheatmode screenwrapping
 let enteredBlackHole = 0; // tracks number of times the worm is through the black hole (could be more than 1)
-let probBlackHole = 1; // probability of a black hole per apple level
+let probBlackHole = 1; // probability of a black hole when spawned
 let probStar = 0.25; // probability of a star per apple level
 let blackHolesActive = false;
 let blackHoles = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
 let applesPerNewBlackHole = 5; // regen blackholes only every 5 apples
+const minDistanceBetweenBlackHoles = 9 * cellSize; // Minimum distance between black holes when spawned
 
 const highScoreKey = 'wormGameHighScores';
-const highScoreLength = 10;
+const highScoreLength = 30;
 
 let currentLevel = 1;
 let applesPerLevel = 10;
@@ -24,7 +41,7 @@ let isLevelPaused = false; // To track if the game is paused for a new level
 
 let directionQueue = []; // Initialize a queue to store direction changes
 let speed; // Will be set based on difficulty
-let worm = [{ x: 200, y: 200 }];
+let worm = [];
 let food = { x: 0, y: 0 };
 let direction = { x: 0, y: 0 };
 let score = 0;
@@ -50,8 +67,20 @@ const worm3HeadTexture = loadTexture('worm.png');
 const starTexture = loadTexture('star.png');
 const appleTexture = loadTexture('apple2.png');
 const blackholeTexture = loadTexture('blackhole.png');
+const fixedBlockTexture = loadTexture('block.png');
 
 const highScores = loadHighScores(); // Load high scores at the start
+
+const fixedBlocksConfig = [
+    [], // No Level 0
+	[], // Empty Level 1
+	[{ x: 60, y: 60 }, { x: 60, y: 300 }, { x: 300, y: 60 }, { x: 300, y: 300 }], // Level 2
+    [{ x: 180, y: 80 }, { x: 180, y: 100 }, { x: 180, y: 120 }, { x: 180, y: 140 }, { x: 180, y: 160 }, { x: 180, y: 180 }, { x: 180, y: 200 }, { x: 180, y: 220 }, { x: 180, y: 240 }, { x: 180, y: 260 }], // Level 3
+	[{ x: 80, y: 140 }, { x: 80, y: 160 }, { x: 80, y: 180 }, { x: 80, y: 200 }, { x: 260, y: 140 }, { x: 260, y: 160 }, { x: 260, y: 180 }, { x: 260, y: 200 }], // Level 4
+    [{ x: 80, y: 160 }, { x: 100, y: 160 }, { x: 120, y: 160 }, { x: 140, y: 160 }, { x: 160, y: 160 }, { x: 180, y: 160 }, { x: 200, y: 160 }, { x: 220, y: 160 }], // Level 5
+    // ... Add more configurations for additional levels
+];
+let fixedBlocks = [];
 
 // should be all lower case for characters, since .toLowerCase() is called in event.key listener
 const directions = {
@@ -95,7 +124,7 @@ function startGame(selectedDifficulty) {
             break;
         case 'Speedy Serpent':
 		    superStarCountdownInitial = 3;
-		    appleLevels = 5;
+		    appleLevels = 10;
             speed = 13;
 			wormTexture = worm3Texture;
 			wormHeadTexture = worm3HeadTexture;
@@ -103,14 +132,16 @@ function startGame(selectedDifficulty) {
             break;
     }
 	worm = [
-        { x: 200, y: 200 }, // Head segment
-        { x: 180, y: 200 }  // Second segment
+        { x: cellSize * canvasCellWidth / 2, y: cellSize * canvasCellHeight / 2 }, // Head segment
+        { x: cellSize + cellSize * canvasCellWidth / 2, y: cellSize + cellSize * canvasCellHeight / 2 }  // Second segment
     ];
-    food = { x: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize, 
-             y: Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize };
+    food = { x: Math.floor(Math.random() * (canvas.width / cellSize)) * cellSize, 
+             y: Math.floor(Math.random() * (canvas.height / cellSize)) * cellSize };
     direction = { x: 0, y: 0 };
     score = 0;
     lastRenderTime = 0;
+	fixedBlocks = fixedBlocksConfig[currentLevel] || [];
+
     applesCollected = 0; // Reset apples collected counter
 
     updateScoreDisplay();
@@ -123,17 +154,17 @@ function startGame(selectedDifficulty) {
 // #############################
 
 function gameLoop(currentTime) {
-console.log(cheatMode);
 	// Check for game over conditions
-	if (!cheatMode && (checkWormWallCollision() || checkWormSelfCollision())) {
+	if (!cheatMode && (checkWormWallCollision() || checkWormSelfCollision() || checkWormBlockCollision())) {
 			
 		if (isHighScore(score)) {
-		updateHighScores(score);
+		let playerName = prompt("Congratulations! Enter your name for the high score: (cancel to not record score)"); // Prompt for the player's name
+		if (playerName) { updateHighScores(score, playerName); }
 		}
 		alert("Game Over! \nFinal score: " + score + "\nApples collected: " + applesCollected + "\nLevel: " + currentLevel + "\nDifficulty level: " + difficulty);
 		document.location.reload();
 		return;
-	} 
+	} 		
 
 	// Manage worm speed
     const secondsSinceLastRender = (currentTime - lastRenderTime) / 1000;
@@ -152,6 +183,7 @@ console.log(cheatMode);
 	if (!isLevelPaused) {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		moveWorm();
+		drawFixedBlocks();
 		drawWorm();
 		drawFood();
 		drawBlackHoles();
@@ -181,6 +213,26 @@ function moveWorm() {
         }
     }
 
+    // Cheat mode: Loop worm from one edge to the other
+    if (cheatMode && checkWormWallCollision()) {
+        headEnteredBlackHole = true;
+        if (head.x < 0) {
+            head.x = canvas.width - cellSize;
+        } else if (head.x >= canvas.width) {
+            head.x = 0;
+        }
+
+        if (head.y < 0) {
+            head.y = canvas.height - cellSize;
+        } else if (head.y >= canvas.height) {
+            head.y = 0;
+        }
+		if (enteredBlackHole === 0) {
+			enteredBlackHole++;
+		}
+        blackHoleAfterSegment.push(1);
+    }
+
     worm.unshift(head);
 	
     // Update and filter blackHoleAfterSegment array
@@ -198,16 +250,16 @@ function moveWorm() {
 	// check if worm got apple
     if (head.x === food.x && head.y === food.y) {
 	    applesCollected++;
-        score += appleWorth;
+        if (!cheatMode) { score += appleWorth; } // only increment score if not in cheat mode
         updateScoreDisplay();
-        generateObjects();
-		
+
 		// Check if a new level is reached
 		if (applesCollected % applesPerLevel === 0) {
 			currentLevel++;
 			updateScoreDisplay()
 			pauseGameForNewLevel();
 		}
+		generateObjects();
 		
     } else {
         worm.pop();
@@ -224,15 +276,14 @@ function pauseGameForNewLevel() {
 }
 
 function displayLevelInfo() {
-    // ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Level ${currentLevel}`, canvasSize / 2, canvasSize / 2 - 20);
-    ctx.fillText('Press an arrow key to start', canvasSize / 2, canvasSize / 2 + 20);
+    ctx.fillText(`Level ${currentLevel}`, canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillText('Press an arrow key to start', canvas.width / 2, canvas.height / 2 + 20);
     ctx.fillStyle = 'black';
-    ctx.fillText(`Level ${currentLevel}`, canvasSize / 2 + 2, canvasSize / 2 - 18);
-    ctx.fillText('Press an arrow key to start', canvasSize / 2 + 2, canvasSize / 2 + 18);
+    ctx.fillText(`Level ${currentLevel}`, canvas.width / 2 + 2, canvas.height / 2 - 18);
+    ctx.fillText('Press an arrow key to start', canvas.width / 2 + 2, canvas.height / 2 + 18);
 }
 
 function updateScoreDisplay() {
@@ -258,10 +309,16 @@ function checkWormSelfCollision() {
     return false;
 }
 
+function checkWormBlockCollision() {
+    return fixedBlocks.some(block => 
+        worm[0].x === block.x && worm[0].y === block.y
+    );
+}
+
 function checkSuperStarCollision() {
     if (superStar && worm[0].x >= superStar.x && worm[0].x < superStar.x + cellSize &&
         worm[0].y >= superStar.y && worm[0].y < superStar.y + cellSize) {
-            score += 4;
+            if (!cheatMode) { score += 4; } // only add to score if not in cheatmode
             updateScoreDisplay();
             clearTimeout(superStarTimer);
             superStar = null;
@@ -279,28 +336,35 @@ function checkSuperStarCollision() {
 function generateObjects() {
 	// order of this subroute:
 	//    1. decrease canvas size (at correct time)
-	//    2. generate stars	(at random)
-	//    3. generate apple 
-	//    4. generate blackholes (at random) last so they can be strategically placed
+	//    2. generate fixed blocks (since they don't move)
+	//    3. generate stars	(at random)
+	//    4. generate apple 
+	//    5. generate blackholes (at random) last so they can be strategically placed
 
-   // check for canvas size shrink 
-   if (applesCollected % appleLevels === 0) {
-        canvasSize -= cellSize; // Decrease canvas size by one block
-        canvas.width = canvasSize;
-        canvas.height = canvasSize;
+   // shrink canvas every appleLevels and only if canvas height/width is over a certain size
+   if ((applesCollected % appleLevels === 0) && (canvas.height > 6 * cellSize) && (canvas.height > 6 * cellSize)) {
+        // Decrease canvas size by one block in height and width
+        canvas.width -= cellSize;
+        canvas.height -= cellSize;
 		
 		// Ensure that the worm is correctly repositioned in all scenarios when the canvas shrinks
 		repositionWormIfOutOfBounds();
     }
-	
+
+	// generate fixed blocks
+    fixedBlocks = fixedBlocksConfig[currentLevel] || [];
+
     // Generate super star if good dice roll
     if (Math.random() < probStar) {
         let starX, starY;
+		let loopCount = 0;
         do {
-            starX = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
-            starY = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
-        } while (isCollisionWithSnake(starX, starY) || isCloseToApple(starX, starY) || isCollisionWithBlackHole(starX, starY));
-
+			loopCount++;
+            starX = Math.floor(Math.random() * (canvas.width / cellSize)) * cellSize;
+            starY = Math.floor(Math.random() * (canvas.height / cellSize)) * cellSize;
+			console.log("starX, starY", starX, starY);
+        } while ((loopCount < 15) && (isCollisionWithSnake(starX, starY) || isCloseToApple(starX, starY) || isCollisionWithBlackHole(starX, starY) || isCollisionWithFixedBlocks(starX, starY)));
+		
         superStar = { x: starX, y: starY };
 		
 		// Countdown logic
@@ -324,27 +388,48 @@ function generateObjects() {
 	let validPosition = false;
     while (!validPosition) {
         // Randomly generate apple position
-        food.x = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
-        food.y = Math.floor(Math.random() * (canvasSize / cellSize)) * cellSize;
+        food.x = Math.floor(Math.random() * (canvas.width / cellSize)) * cellSize;
+        food.y = Math.floor(Math.random() * (canvas.height / cellSize)) * cellSize;
+		console.log("food.x, food.y: ", food.x, food.y);
 
         // Check for collisions with snake, black holes, and the star
         if (!isCollisionWithSnake(food.x, food.y) && 
             !isCollisionWithStar(food.x, food.y) &&
+            !isCollisionWithFixedBlocks(food.x, food.y) &&
 			!isCollisionWithBlackHole(food.x, food.y)) {
             validPosition = true;
-        }
+		}	
+		// make sure apple isn't next to border if level will shrink next round (i.e. is 1 less than multiple of applesPerLevel)
+		if ((currentLevel + 1) % applesPerLevel === 0) { 
+			if (food.x === canvas.width || food.x === 0 || food.y === canvas.height || food.y === 0) {
+				validPosition = false;
+			}
+		}
+        
     }
     // debug - console.log('apple location x y', food.x, food.y, 'apple # ', applesCollected);
 
 
 	// Generate black holes if good dice roll - do last so black holes can be strategically placed based on worm head and apple/star
 	// Only generate if the worm is NOT teleporting through the black holes. If it is, then keep current black hole in place
-	// Only generate every applesPerNewBlackHole 
-	if (blackHoleAfterSegment.length === 0 && (applesCollected % applesPerNewBlackHole === 0)) {
-		if (Math.random() < probBlackHole) {
-			generateBlackHoles();
-		} else {
-			blackHolesActive = false;
+	// Only generate every applesPerNewBlackHole and if size of shrinking canvas is greater than a ratio of minDistanceBetweenBlackHoles (otherwise they can't fit!)
+
+	// Check if the number of apples collected is a multiple of applesPerNewBlackHole and make sure worm is not currently in a blackhole
+	if ((applesCollected % applesPerNewBlackHole === 0) && (blackHoleAfterSegment.length === 0)) {
+		blackHolesActive = false; // Set blackHolesActive to false by default
+
+		// make sure canvas is big enough to accomodate separation
+		if (canvas.width + canvas.height > 3.0 * minDistanceBetweenBlackHoles) {
+			
+			if (Math.random() < probBlackHole) {
+				let loopCount = 0;
+				do {
+					loopCount++;
+					generateBlackHoles();
+				} while (areBlackHolesTooClose() && (loopCount < 15));
+				// Set blackHolesActive to true only if the above conditions are met
+				if (loopCount < 15) { blackHolesActive = true; }
+			}
 		}
 	}
 }
@@ -370,9 +455,25 @@ function generateBlackHoles() {
     blackHolesActive = true;
 }
 
+function areBlackHolesTooClose() {
+	    let positionIsInvalid = false;
+		// Ensure black holes are at least minDistanceBetweenBlackHoles away from each other
+		let i = 1;
+		for (let j = 0; j < i; j++) {
+			let xDistance = Math.abs(blackHoles[j].x - blackHoles[i].x);
+			let yDistance = Math.abs(blackHoles[j].y - blackHoles[i].y);
+			let totalDistance = xDistance + yDistance;
+			console.log("totalDistance", totalDistance);
+			if (totalDistance < minDistanceBetweenBlackHoles) {
+				positionIsInvalid = true;
+				break;
+			}
+		}
+	return positionIsInvalid;
+}
+
 function spawnBlackHoleNear(target, range, index) {
     const margin = 4 * cellSize; // margin is to keep blackholes away from the edge of the canvas
-    const minDistance = 3 * cellSize; // Minimum distance between black holes
     let i = index;
     let positionIsValid;
     do {
@@ -381,36 +482,37 @@ function spawnBlackHoleNear(target, range, index) {
         let potentialY = target.y + (Math.floor(Math.random() * (2 * range + 1)) - range) * cellSize;
 
         // Ensure the positions are within the canvas boundaries considering the margin
-        potentialX = Math.max(margin, Math.min(potentialX, canvasSize - margin - cellSize));
-        potentialY = Math.max(margin, Math.min(potentialY, canvasSize - margin - cellSize));
+        potentialX = Math.max(margin, Math.min(potentialX, canvas.width - margin - cellSize));
+        potentialY = Math.max(margin, Math.min(potentialY, canvas.height - margin - cellSize));
 
         // Assign the validated positions
         blackHoles[i].x = potentialX;
         blackHoles[i].y = potentialY;
+		
+		console.log("blackhole x y: ", potentialX, potentialY);
 
-        // Check if the position is valid (4 criteria)
+        // Check if the position is valid (5 criteria)
         positionIsValid = !isOutOfBounds(blackHoles[i].x, blackHoles[i].y) &&
                           !isCollisionWithSnake(blackHoles[i].x, blackHoles[i].y) &&
                           !isCollisionWithApple(blackHoles[i].x, blackHoles[i].y) &&
+						  !isCollisionWithFixedBlocks(blackHoles[i].x, blackHoles[i].y) &&
                           !isCollisionWithStar(blackHoles[i].x, blackHoles[i].y);
 
-		// Ensure black holes are at least minDistance away from each other
-		for (let j = 0; j < i; j++) {
-			if (Math.abs(blackHoles[j].x - blackHoles[i].x) < minDistance && 
-				Math.abs(blackHoles[j].y - blackHoles[i].y) < minDistance) {
-				positionIsValid = false;
-				break;
-			}
-		}
     } while (!positionIsValid);
 }
 
 function isOutOfBounds(x, y) {
-    return x < 0 || x >= canvasSize || y < 0 || y >= canvasSize;
+    return x < 0 || x >= canvas.width || y < 0 || y >= canvas.height;
 }
 
 function isCollisionWithSnake(x, y) {
     return worm.some(segment => segment.x === x && segment.y === y);
+}
+
+function isCollisionWithFixedBlocks(x, y) {
+    return fixedBlocks.some(block => 
+        x === block.x && y === block.y
+    );
 }
 
 function isCollisionWithApple(x, y) {
@@ -443,18 +545,18 @@ function repositionWormIfOutOfBounds() {
     let minY = Math.min(...worm.map(segment => segment.y));
     let moveX = 0, moveY = 0;
 
-    if (maxX >= canvasSize) {
-        moveX = canvasSize - cellSize - maxX;
+    if (maxX >= canvas.width) {
+        moveX = canvas.width - cellSize - maxX;
     } else if (minX < 0) {
         moveX = -minX;
     }
 
-    if (maxY >= canvasSize) {
-        moveY = canvasSize - cellSize - maxY;
+    if (maxY >= canvas.height) {
+        moveY = canvas.height - cellSize - maxY;
     } else if (minY < 0) {
         moveY = -minY;
     }
-	// debug - console.log("minX, minY", minX, minY)
+	// debug - console.log("minX, minY, moveX, moveY", minX, minY, moveX, moveY)
     worm = worm.map(segment => {
         return { x: segment.x + moveX, y: segment.y + moveY };
     });
@@ -472,6 +574,16 @@ function repositionWormIfOutOfBounds() {
 // ## DRAW GAME FIELD OBJECTS ##
 // #############################
 
+function drawFixedBlocks() {
+    fixedBlocks.forEach(block => {		
+		if (fixedBlockTexture) {
+			ctx.drawImage(fixedBlockTexture, block.x, block.y, cellSize, cellSize);
+		} else {
+			drawCell(block, 'brown');
+		} 
+    });
+}
+
 function drawBlackHoles() {
     if (!blackHolesActive) return;
     blackHoles.forEach(bh => {
@@ -487,13 +599,20 @@ function drawBlackHoles() {
 
 function drawWorm() {
     for (let i = worm.length - 1; i >= 0; i--) {
+		// worm head
         if (i === 0) {
-		drawWormSegment(worm[i], wormHeadTexture);
+
+			if(cheatMode && Math.random() < 0.5) {
+				drawWormSegment(worm[i], starTexture); // blink worm head if cheatmode is on
+		} else {
+			drawWormSegment(worm[i], wormHeadTexture); } 
+ 	
 		} else
 
+		// draw worm body
 		drawWormSegment(worm[i], wormTexture);
 
-        // Only draw middle segments if not last segment and segment is not between black holes
+        // draw worm middle segments - only draw if not last segment and segment is not between black holes
         if (i > 0 && !blackHoleAfterSegment.includes(i + 1)) {
             const nextSegment = worm[i - 1];
             // Calculate the position of the new segment
@@ -589,12 +708,12 @@ function isHighScore(currentScore) {
     return currentScore > lowestHighScore;
 }
 
-function updateHighScores(currentScore) {
+function updateHighScores(currentScore, playerName) {
     const highScores = loadHighScores(); // Load existing high scores
 
     // Create an object for the new score
     const newScore = { 
-        name: prompt("Congratulations! Enter your name for the high score:"), // Prompt for the player's name
+        name: playerName,
         difficulty: difficulty,
         applesCollected: applesCollected,
         levelAchieved: currentLevel,
@@ -606,8 +725,8 @@ function updateHighScores(currentScore) {
     highScores.sort((a, b) => b.totalScore - a.totalScore); // Sort in descending order of scores
 
     // Keep only the top scores
-    if (highScores.length > highScoreLength) {
-        highScores.pop(); // Remove the last item if there are more than 5 scores
+    while (highScores.length > highScoreLength) {
+        highScores.pop(); // Remove the last item if there are too many scores
     }
 
     saveHighScores(highScores); // Save the updated list of high scores
@@ -617,44 +736,131 @@ function saveHighScores(highScores) {
     localStorage.setItem(highScoreKey, JSON.stringify(highScores));
 }
 
-// #########################################
-// ## GAME KEY CONTROL LISTENER AND LOGIC ##
-// #########################################
-
-function changeDirection(event) {
-	let keyPressed = event.key;
-    if (['W', 'A', 'S', 'D', 'X', 'w', 'a', 's', 'd', 'x'].includes(keyPressed)) {
-        keyPressed = keyPressed.toLowerCase(); // Convert WASD keys to lowercase
-	}
-	
-	if (keyPressed === "x") {
-		let cheatMode = true;
-	}
-	const newDirection = directions[keyPressed];
-	
-    if (newDirection) {
-
-        // Unpause the game and start the new level
-		if (isLevelPaused) {
-			isLevelPaused = false;
-		}
-
-        // Limit the queue to only the last 3 directions
-        if (directionQueue.length < 3) {
-            directionQueue.push(newDirection);
-        }
-    }
-}
+// ###################################################
+// ## GAME KEY AND SWIPE CONTROL LISTENER AND LOGIC ##
+// ###################################################
 
 function processDirectionQueue() {
     while (directionQueue.length > 0) {
         const newDirection = directionQueue.shift();
-        // Check if the new direction is not opposite to the current direction
         if (!(newDirection.x === -direction.x && newDirection.y === -direction.y)) {
             direction = newDirection;
-            break; // Exit after processing one direction change
+            break;
+        }
+    }
+}
+function changeDirection(newDirection) {
+    // Limit the queue to only the last 3 directions
+    if (directionQueue.length < 3) {
+        directionQueue.push(newDirection);
+    }
+}
+
+// Modified function for keyboard input
+function handleKeyInput(event) {
+    let keyPressed = event.key;
+    if (['W', 'A', 'S', 'D', 'X', 'w', 'a', 's', 'd', 'x'].includes(keyPressed)) {
+        keyPressed = keyPressed.toLowerCase(); // Convert WASD keys to lowercase
+    }
+    
+    if (keyPressed === "x") {
+        cheatMode = !cheatMode;
+        score = 0; // clear score when you enter cheat mode
+        updateScoreDisplay();
+    }
+
+    const newDirection = directions[keyPressed];
+    if (newDirection) {
+        changeDirection(newDirection); // Use the changeDirection function
+
+        // Unpause the game and start the new level
+        if (isLevelPaused) {
+            isLevelPaused = false;
         }
     }
 }
 
-document.addEventListener("keydown", changeDirection);
+// Touch control handlers
+function handleTouchStart(event) {
+    event.preventDefault(); // Prevent default action	
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+}
+
+function handleTouchMove(event) {
+    event.preventDefault(); // Prevent default action
+    touchEndX = event.changedTouches[0].clientX;
+    touchEndY = event.changedTouches[0].clientY;
+}
+
+// Updated touch control functions
+function handleTouchEnd() {
+    event.preventDefault(); // Prevent default action
+	// Unpause the game if it is paused
+    if (isLevelPaused) {
+        isLevelPaused = false;
+        return; // Exit the function to avoid changing the direction if the game was paused
+    }
+	
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    let touchDirection;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        touchDirection = deltaX > 0 ? directions['ArrowRight'] : directions['ArrowLeft'];
+    } else {
+        // Vertical swipe
+        touchDirection = deltaY > 0 ? directions['ArrowDown'] : directions['ArrowUp'];
+    }
+
+    changeDirection(touchDirection); // Use the same changeDirection function
+}
+
+function handleMouseDown(event) {
+    mouseStartX = event.clientX;
+    mouseStartY = event.clientY;
+}
+
+function handleMouseMove(event) {
+    // You might not need to handle mousemove unless you want real-time tracking
+}
+
+function handleMouseUp(event) {
+    // Unpause the game if it is paused
+    if (isLevelPaused) {
+        isLevelPaused = false;
+        return; // Exit the function to avoid changing the direction if the game was paused
+    }
+	
+    mouseEndX = event.clientX;
+    mouseEndY = event.clientY;
+
+    const deltaX = mouseEndX - mouseStartX;
+    const deltaY = mouseEndY - mouseStartY;
+
+    let mouseDirection;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal movement
+        mouseDirection = deltaX > 0 ? directions['ArrowRight'] : directions['ArrowLeft'];
+    } else {
+        // Vertical movement
+        mouseDirection = deltaY > 0 ? directions['ArrowDown'] : directions['ArrowUp'];
+    }
+
+    changeDirection(mouseDirection);
+}
+
+// Mouse
+document.addEventListener('mousedown', handleMouseDown, false);
+document.addEventListener('mousemove', handleMouseMove, false);
+document.addEventListener('mouseup', handleMouseUp, false);
+
+// Keyboard
+document.addEventListener("keydown", handleKeyInput);
+
+// Add touch event listeners with { passive: false }
+document.addEventListener('touchstart', handleTouchStart, { passive: false });
+document.addEventListener('touchmove', handleTouchMove, { passive: false });
+document.addEventListener('touchend', handleTouchEnd, { passive: false });
+
