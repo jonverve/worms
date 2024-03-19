@@ -26,8 +26,8 @@ This code is licensed under the GPL-3.0 license.
 
 ## Screenshots
 
-![Level 1](https://github.com/jonverve/worms/blob/main/ss1.png?raw=true)
-![Level 2](https://github.com/jonverve/worms/blob/main/ss4.png?raw=true)
-![Level 3](https://github.com/jonverve/worms/blob/main/ss5.png?raw=true)
-![Level 4](https://github.com/jonverve/worms/blob/main/ss3.png?raw=true)
-![Starting screen](https://github.com/jonverve/worms/blob/main/ss2.png?raw=true)
+![Level 1](https://github.com/jonverve/worms/blob/main/img/ss1.png?raw=true)
+![Level 2](https://github.com/jonverve/worms/blob/main/img/ss4.png?raw=true)
+![Level 3](https://github.com/jonverve/worms/blob/main/img/ss5.png?raw=true)
+![Level 4](https://github.com/jonverve/worms/blob/main/img/ss3.png?raw=true)
+![Starting screen](https://github.com/jonverve/worms/blob/main/img/ss2.png?raw=true)

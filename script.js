@@ -58,16 +58,16 @@ let superStarCountdownInitial = null; // Initial countdown value in seconds
 
 let wormTexture = null;
 let wormHeadTexture = null;
-const worm1Texture = loadTexture('worm2.png');
-const worm2Texture = loadTexture('worm.png');
-const worm3Texture = loadTexture('worm3.png');
-const worm1HeadTexture = loadTexture('worm3.png');
-const worm2HeadTexture = loadTexture('worm2.png');
-const worm3HeadTexture = loadTexture('worm.png');
-const starTexture = loadTexture('star.png');
-const appleTexture = loadTexture('apple2.png');
-const blackholeTexture = loadTexture('blackhole.png');
-const fixedBlockTexture = loadTexture('block.png');
+const worm1Texture = loadTexture('img/worm2.png');
+const worm2Texture = loadTexture('img/worm.png');
+const worm3Texture = loadTexture('img/worm3.png');
+const worm1HeadTexture = loadTexture('img/worm3.png');
+const worm2HeadTexture = loadTexture('img/worm2.png');
+const worm3HeadTexture = loadTexture('img/worm.png');
+const starTexture = loadTexture('img/star.png');
+const appleTexture = loadTexture('img/apple2.png');
+const blackholeTexture = loadTexture('img/blackhole.png');
+const fixedBlockTexture = loadTexture('img/block.png');
 
 const highScores = loadHighScores(); // Load high scores at the start
 
