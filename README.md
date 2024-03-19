@@ -12,7 +12,7 @@ Just download all files into a single folder and open in web browser. As of v11,
 
 ## How to Play
 
-* ⬇️ Use the arrow keys to control the direction of the worm.
+* ⬇️ Use the arrow keys, WASD, or mouse click/hold to control the direction of the worm.
 * 🍎 Every time you eat red apples you will grow longer.
 * 💥 Avoid running into the walls or into yourself!
 * ⭐ Super stars will appear occasionally, collect them to shrink and score extra points, but watch out, they expire quickly!
