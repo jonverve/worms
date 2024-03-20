@@ -2,11 +2,11 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 // Cell is size of all sprites (worm, apples, & all other game elements)
-const canvasCellWidth = 20;
-const canvasCellHeight = 20;
+let canvasCellWidth = 20;
+let canvasCellHeight = 20;
 
 // Pixels per cell
-const cellSize = 20;
+let cellSize = 20;
 
 // Initial canvas width and height
 canvas.width = cellSize * canvasCellWidth;
@@ -144,10 +144,31 @@ function startGame(selectedDifficulty) {
 	fixedBlocks = fixedBlocksConfig[currentLevel] || [];
 
     applesCollected = 0; // Reset apples collected counter
-
+    adjustCanvasSize(); // only adjusts if screenwidth is <= 600px
     updateScoreDisplay();
 	pauseGameForNewLevel();
     gameLoop();
+}
+
+function adjustCanvasSize() {
+    if (window.innerWidth <= 600) {
+        // Find the best fitting cellSize for the viewport
+        const maxCellsFitWidth = Math.floor(window.innerWidth / cellSize);
+        const maxCellsFitHeight = Math.floor(window.innerHeight / cellSize);
+        const minCellsFit = Math.min(maxCellsFitWidth, maxCellsFitHeight);
+
+        cellSize = Math.floor(Math.min(window.innerWidth, window.innerHeight) / minCellsFit);
+
+        canvas.width = cellSize * minCellsFit;
+        canvas.height = cellSize * minCellsFit;
+    } else {
+        // Reset to default sizes for larger screens
+        cellSize = 20;
+        canvas.width = cellSize * canvasCellWidth;
+        canvas.height = cellSize * canvasCellHeight;
+    }
+
+    // Update any other game elements that depend on cellSize...
 }
 
 // #############################

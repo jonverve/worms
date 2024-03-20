@@ -158,3 +158,18 @@ button:hover {
 .pop-animation {
     animation: pop 0.25s ease;
 }
+
+
+
+@media screen and (max-width: 600px) {
+    /* Adjust styles for smaller screens... */
+
+    #gameCanvas {
+        width: 100vw; /* Full viewport width */
+        height: 100vh; /* Full viewport height */
+        max-height: 100vh; /* Maximum height */
+        object-fit: cover; /* Cover the whole viewport without distorting aspect ratio */
+    }
+
+    /* Styles for touchControls... */
+}
