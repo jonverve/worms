@@ -30,28 +30,14 @@ canvas {
     font-size: 20px;
     font-family: 'Arial', sans-serif;
     position: absolute;
-    top: -30px;
+    top: 113px;
     left: 50%;
     transform: translateX(-50%);
 	width: 550px;
 	margin: 0 auto;
 	text-align: center;
 }
- /*
-#openingScreen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-button {
-    margin: 10px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-}
-*/
+/*
 #gameScreen {
     display: flex;
     flex-direction: column;
@@ -59,7 +45,7 @@ button {
     justify-content: center;
     position: relative;
 }  
-
+*/
 
 
 /* Define color variables based on the color analysis */
@@ -130,6 +116,7 @@ button:hover {
 }
 
 #buttonContainer {
+    z-index: 1000; /* or higher if needed */
     display: flex;
     justify-content: space-between; /* This will space the buttons evenly */
     padding: 0; /* Adjust padding as necessary */
@@ -162,14 +149,16 @@ button:hover {
 
 
 @media screen and (max-width: 600px) {
-    /* Adjust styles for smaller screens... */
-
     #gameCanvas {
-        width: 100vw; /* Full viewport width */
-        height: 100vh; /* Full viewport height */
-        max-height: 100vh; /* Maximum height */
-        object-fit: cover; /* Cover the whole viewport without distorting aspect ratio */
+        width: 100vw; /* Set width to full viewport width */
+        height: auto; /* Set height to auto to maintain aspect ratio */
+        max-width: 100%; /* Ensure it doesn't overflow width */
+        max-height: 100vh; /* Maximum height based on viewport */
+        object-fit: contain; /* Fit the content within the element's box */
     }
 
+    #score {
+        top: 82px !important;
+    }
     /* Styles for touchControls... */
 }
