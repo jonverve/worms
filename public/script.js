@@ -1108,23 +1108,46 @@ function applyPopAnimation(obj) {
 // ##########################
 // ## HIGH SCORE FUNCTIONS ##
 // ##########################
+function populateHighScoresTable(highScores, tableElement) {
+	let highScoreList;
+	
+	if (source === 'landing') {
+		const highScoreScreen = document.getElementById('highScoreScreen');
+		if (highScoreScreen) {
+			highScoreList = highScoreScreen.querySelector('tbody');
+		}
+	} else {
+		const highScorePanel = document.getElementById('highScorePanel');
+		if (highScorePanel) {
+			highScoreList = highScorePanel.querySelector('tbody');
+		}
+	}
 
-function showHighScores() {
-    const highScores = loadHighScores();
-    const highScoreList = document.getElementById('highScoreList').getElementsByTagName('tbody')[0];
-	//const newRow = highScoreList.insertRow(0)
-	highScoreList.innerHTML = highScores.map((score, index) => 
-    `<tr>
-        <td>${index + 1}</td>
-        <td>${score.name}</td>
-        <td>${score.totalScore}</td>
-        <td>${score.difficulty}</td>
-        <td>${score.applesCollected}</td>
-        <td>${score.levelAchieved}</td>
-    </tr>`
-	).join('');
-    document.getElementById('highScoreScreen').style.display = 'block';
-  //  document.getElementById('openingScreen').style.display = 'none';
+	if (highScoreList) {
+		highScoreList.innerHTML = highScores
+			.map(
+				(score, index) =>
+					`<tr>
+						<td>${index + 1}</td>
+						<td>${score.name}</td>
+						<td>${score.totalScore}</td>
+						<td>${score.difficulty}</td>
+						<td>${score.applesCollected}</td>
+						<td>${score.levelAchieved}</td>
+					</tr>`
+			)
+			.join('');
+
+		if (source === 'landing') {
+			document.getElementById('highScoreScreen').style.display = 'block';
+		}
+	}
+}
+
+function showHighScores(source) {
+	const highScores = loadHighScores();
+	
+	populateHighScoresTable(highScores, source);
 }
 
 function hideHighScores() {
@@ -1531,17 +1554,8 @@ function gameOver() {
     }
 
     // Display current high scores
-    const highScores = loadHighScores();
-    highScoreList.innerHTML = highScores.map((score, index) => 
-        `<tr>
-            <td>${index + 1}</td>
-            <td>${score.name}</td>
-            <td>${score.totalScore}</td>
-            <td>${score.difficulty}</td>
-            <td>${score.applesCollected}</td>
-            <td>${score.levelAchieved}</td>
-        </tr>`
-    ).join('');
+	const highScores = loadHighScores();
+	populateHighScoresTable(highScores, 'panel');
 
     // TODO FIX THIS - should not just reload the page after a pause, but should wait for the user to close the high score screen
     //     also depends on if they got a high score or not
@@ -1563,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         e.stopPropagation();
         highScorePanel.style.display = 'block';
-        showHighScores();
+		showHighScores('panel');
         isLevelPaused = true;
     });
 
@@ -1580,8 +1594,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const playerName = playerNameInput.value.trim();
         if (playerName) {
             updateHighScores(score, playerName);
-            showHighScores();
-            document.getElementById('highScoreForm').style.display = 'none';
+			showHighScores('panel');
+			showHighScores('landing');
+           document.getElementById('highScoreForm').style.display = 'none';
         }
     });
 
@@ -1597,3 +1612,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Add event listener for high scores on landing page
+document.addEventListener('DOMContentLoaded', function() {
+    const highScoreIconLanding = document.getElementById('highScoreIconLanding');
+	if (highScoreIconLanding) {
+		highScoreIconLanding.addEventListener('click', function (e) {
+			showHighScores('landing');
+		});
+	}
+});
