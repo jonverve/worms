@@ -16,6 +16,64 @@
         <button onclick="startGame('Worm Wriggler')">Worm Wriggler</button>
         <button onclick="startGame('Speedy Serpent')">Speedy Serpent</button>
     </div>
+    <div id="gameOptions">
+        <label>
+            <input type="checkbox" id="debugMode" onchange="toggleDebugMode()">
+            Debug Mode
+        </label>
+        <div id="debugControls" style="display: none;">
+            <p style="text-align: center; margin-bottom: 10px; color: var(--dark-blue-green); font-style: italic;">
+                Note: to start game in debug mode, simply select the difficulty above after selecting options below.
+            </p>
+            <div>
+                <label>
+                    <input type="checkbox" id="shrinkingEnabled">
+                    Enable Shrinking Arena
+                </label>
+                <label>
+                    <input type="checkbox" id="cheatModeEnabled">
+                    Enable Cheat Mode
+                </label>
+                <label>
+                    <input type="checkbox" id="monsterEnabled">
+                    Enable Monster
+                </label>
+                <label>
+                    <input type="checkbox" id="preserveWormState">
+                    Keep worm length and position after beating levels
+                </label>
+            </div>
+            <div>
+                <label>
+                    Level:
+                    <select id="levelSelector">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                    </select>
+                </label>
+                <label>
+                    Star Probability (0-1):
+                    <input type="number" id="starProb" min="0" max="1" step="0.01" value="0.25">
+                </label>
+                <label>
+                    Black Hole Probability (0-1):
+                    <input type="number" id="blackHoleProb" min="0" max="1" step="0.01" value="1">
+                </label>
+                <label>
+                    Golden Apple Probability (0-1):
+                    <input type="number" id="goldenAppleProb" min="0" max="1" step="0.01" value="0.1">
+                </label>
+            </div>
+            <button onclick="showLevelDesigns()">View Level Designs</button>
+        </div>
+    </div>
 	<div id="highScoreScreen" style="display:none;">
     <h2>High Scores</h2>
     <table id="highScoreList">
@@ -28,10 +86,11 @@
 	<button onclick="showHighScores()">View High Scores</button>
 
 		<div id="instructions">
-            <h2>How to Play</h2>
+            <h2>How to Play!</h2>
 			<ul>
             <li>⬇️ Use the arrow keys, WASD, or mouse click/hold to control the direction of the worm.</li>
             <li>🍎 Every time you eat red apples you will grow longer.</li>
+            <li>🌟 Watch for golden apples! They're worth more points but disappear quickly and make you grow extra long - a risky but rewarding choice!</li>
             <li>💥 Avoid running into the walls or into yourself!</li>
 			<li>⭐ Super stars will appear occasionally, collect them to shrink and score extra points, but watch out, they expire quickly!</li>
 			<li>🕳️ Watch out for black holes! Entering one will teleport the worm to the other side. They appear randomly and add a twist to your adventure! Hmm...perhaps you could use them to your advantage...</li>
@@ -42,10 +101,61 @@
 	
 	</div>
     <div id="gameScreen" style="display:none;">
-	        <div id="score">Score: 0</div>
+        <div id="score">Score: 0</div>
         <canvas id="gameCanvas"></canvas> <br />
-		<img src="img/titlescreen.jpg" style="width:402px" />
+        <img src="img/titlescreen.jpg" style="width:402px" />
+        
+        <!-- High Score Icon -->
+        <button id="highScoreIcon" class="high-score-icon" title="View High Scores">
+            🏆
+        </button>
+        
+        <!-- High Score Panel -->
+        <div id="highScorePanel" class="high-score-panel">
+            <div class="high-score-header">
+                <h3>High Scores</h3>
+                <button class="close-button" title="Close">×</button>
+            </div>
+            <div class="high-score-content">
+                <table id="highScoreList">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Score</th>
+                            <th>Difficulty</th>
+                            <th>Apples</th>
+                            <th>Level</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="highScoreForm" class="high-score-form" style="display: none;">
+                <h4>Game Over! New High Score!</h4>
+                <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+                <button id="submitScore">Submit</button>
+            </div>
+        </div>
     </div>
+    
+    <div id="levelDesignScreen" style="display:none;">
+        <h2>Level Designs</h2>
+        <button onclick="hideLevelDesigns()">Return to Main Menu</button>
+        <div id="levelControls">
+            <label>
+                Show Shrinking for Difficulty:
+                <select id="shrinkingDifficulty" onchange="updateLevelPreviews()">
+                    <option value="">No Shrinking</option>
+                    <option value="Easy Peasy">Easy Peasy</option>
+                    <option value="Worm Wriggler">Worm Wriggler</option>
+                    <option value="Speedy Serpent">Speedy Serpent</option>
+                </select>
+            </label>
+        </div>
+        <div id="levelGridContainer"></div>
+    </div>
+    
     <script src="script.js"></script>
 </body>
 </html>
